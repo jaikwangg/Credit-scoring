@@ -11,11 +11,11 @@ interface PlanCardProps {
 export default function PlanCard({ plan, isSelected, onSelect }: PlanCardProps) {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'Easy':
+      case 'Conservative':
         return 'bg-green-100 text-green-800';
-      case 'Moderate':
+      case 'Balanced':
         return 'bg-yellow-100 text-yellow-800';
-      case 'Challenging':
+      case 'Aggressive':
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -43,8 +43,8 @@ export default function PlanCard({ plan, isSelected, onSelect }: PlanCardProps) 
       </div>
 
       <div className="mb-4">
-        <p className="text-sm font-medium text-gray-600 mb-1">Goal</p>
-        <p className="text-gray-900">{plan.goal}</p>
+        <p className="text-sm font-medium text-gray-600 mb-1">Objective</p>
+        <p className="text-gray-900">{plan.objective}</p>
       </div>
 
       <div className="mb-4">

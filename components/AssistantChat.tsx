@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { CreditInput, Plan } from '@/types/credit';
-import { generateAssistantResponse } from '@/utils/assistant';
+import { generateAssistantResponse, generateSummary } from '@/utils/assistant';
 
 interface Message {
   id: string;
@@ -14,14 +14,13 @@ interface Message {
 interface AssistantChatProps {
   input: CreditInput;
   selectedPlan?: Plan;
-  summary: string;
 }
 
-export default function AssistantChat({ input, selectedPlan, summary }: AssistantChatProps) {
+export default function AssistantChat({ input, selectedPlan }: AssistantChatProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: summary,
+      text: generateSummary(input),
       isUser: false,
       timestamp: new Date(),
     },

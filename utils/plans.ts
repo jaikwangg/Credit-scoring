@@ -8,65 +8,69 @@ export function generatePlans(input: CreditInput): Plan[] {
   const score = scoreCredit(input);
   const parseNumber = (val: string): number => parseFloat(val) || 0;
   
-  const mainIncome = parseNumber(input.mainIncome);
-  const additionalIncome = parseNumber(input.additionalIncome);
-  const totalIncome = mainIncome + additionalIncome;
-  const livingCosts = parseNumber(input.livingCosts);
-  const targetAmount = parseNumber(input.targetAmount);
-  const loanPeriod = parseNumber(input.loanPeriod);
+  const salary = parseNumber(input.Salary);
+  const outstanding = parseNumber(input.outstanding);
+  const overdue = parseNumber(input.overdue);
+  const loanAmount = parseNumber(input.loan_amount);
+  const interestRate = parseNumber(input.Interest_rate);
+  const totalDebt = outstanding + overdue;
 
-  const disposableIncome = totalIncome - livingCosts;
-  const monthlyTarget = loanPeriod > 0 ? targetAmount / loanPeriod : targetAmount / 12;
+  const debtToSalaryRatio = salary > 0 ? totalDebt / salary : 0;
+  const hasOverdue = overdue > 0;
 
-  // Plan A: Conservative approach (best for high scores)
+  // Plan A: Conservative (Low risk, gradual improvement)
   const planA: Plan = {
     id: 'A',
-    goal: `Achieve ${score.label} credit score and secure loan of $${targetAmount.toLocaleString()}`,
-    timeframe: `${Math.max(6, Math.ceil(loanPeriod / 2))} months`,
+    objective: 'Gradual credit improvement with low risk and stable repayment behavior',
+    timeframe: '12-18 months',
     keyActions: [
-      'Maintain current saving habits',
-      'Reduce discretionary spending by 10%',
-      'Build emergency fund (3 months expenses)',
-      'Pay down existing debts systematically',
-      'Monitor credit utilization monthly',
+      'Maintain consistent on-time payments for all debts',
+      'Pay down outstanding balance by 10-15% monthly',
+      'Avoid taking on new debt during improvement period',
+      'Build emergency fund equivalent to 2-3 months expenses',
+      'Monitor credit report monthly for accuracy',
+      'Negotiate lower interest rates where possible',
     ],
-    difficulty: 'Easy',
-    estimatedScoreImpact: '+50 to +100 points',
+    difficulty: 'Conservative',
+    estimatedScoreImpact: '+50 to +150 points',
   };
 
-  // Plan B: Moderate approach (balanced)
+  // Plan B: Balanced (Moderate risk and effort)
   const planB: Plan = {
     id: 'B',
-    goal: `Improve creditworthiness and qualify for better loan terms`,
-    timeframe: `${Math.max(12, Math.ceil(loanPeriod * 0.75))} months`,
+    objective: 'Optimized debt and payment structure for faster improvement',
+    timeframe: '6-12 months',
     keyActions: [
-      'Increase savings rate by 15-20%',
-      'Create detailed monthly budget',
-      'Negotiate lower interest rates on existing debts',
-      'Consider debt consolidation if applicable',
-      'Build credit history with small secured loans',
-      'Reduce non-essential expenses',
+      'Aggressively pay down overdue amounts first',
+      'Implement debt consolidation if interest rates are high',
+      'Increase monthly payments by 20-30% where possible',
+      'Refinance existing loans at lower interest rates',
+      'Create detailed monthly budget and stick to it',
+      'Consider balance transfer for high-interest debts',
+      'Reduce discretionary spending by 15-20%',
     ],
-    difficulty: 'Moderate',
-    estimatedScoreImpact: '+100 to +200 points',
+    difficulty: 'Balanced',
+    estimatedScoreImpact: '+100 to +250 points',
   };
 
-  // Plan C: Aggressive approach (high risk, high reward)
+  // Plan C: Aggressive (Fastest potential improvement)
   const planC: Plan = {
     id: 'C',
-    goal: `Rapid credit improvement to reach target loan amount quickly`,
-    timeframe: `${Math.max(3, Math.ceil(loanPeriod / 3))} months`,
+    objective: 'Maximum credit improvement in shortest timeframe',
+    timeframe: '3-6 months',
     keyActions: [
-      'Aggressively cut expenses by 30-40%',
-      'Increase income through side work or additional job',
-      'Sell non-essential assets to pay down debt',
-      'Use all disposable income for debt reduction',
+      'Eliminate all overdue payments immediately',
+      'Pay down 30-40% of outstanding debt within first 3 months',
+      'Consider debt settlement or negotiation for high balances',
+      'Cut all non-essential expenses by 40-50%',
+      'Explore additional income sources (side work, asset sales)',
+      'Use all available disposable income for debt reduction',
       'Consider credit counseling or debt management program',
-      'Apply for secured credit cards to build history',
+      'Apply for secured credit cards to rebuild credit history',
     ],
-    difficulty: 'Challenging',
+    difficulty: 'Aggressive',
     estimatedScoreImpact: '+150 to +300 points',
-    warnings: '⚠️ This plan requires significant discipline and lifestyle changes. High risk of burnout. Only recommended if you have strong financial discipline and support system.',
+    warnings: '⚠️ WARNING: This plan requires exceptional financial discipline and may significantly impact your lifestyle. Only recommended if you have strong commitment and support system. High risk of burnout if not managed carefully.',
   };
 
   return [planA, planB, planC];
@@ -77,35 +81,37 @@ export function generatePlans(input: CreditInput): Plan[] {
  */
 export function generateChecklist(planId: 'A' | 'B' | 'C', input: CreditInput): ChecklistItem[] {
   const baseChecklist: ChecklistItem[] = [
-    { id: '1', task: 'Review monthly budget and track expenses', completed: false },
-    { id: '2', task: 'Make minimum payments on all debts', completed: false },
-    { id: '3', task: 'Transfer savings to dedicated account', completed: false },
-    { id: '4', task: 'Monitor credit score and report', completed: false },
+    { id: '1', task: 'Review all outstanding debts and payment due dates', completed: false },
+    { id: '2', task: 'Make minimum payments on all accounts', completed: false },
+    { id: '3', task: 'Update budget tracker with this week\'s expenses', completed: false },
+    { id: '4', task: 'Check credit report for any errors or discrepancies', completed: false },
   ];
 
   if (planId === 'A') {
     return [
       ...baseChecklist,
-      { id: '5', task: 'Review and optimize one expense category', completed: false },
-      { id: '6', task: 'Check for any unnecessary subscriptions', completed: false },
+      { id: '5', task: 'Make scheduled payment toward outstanding balance', completed: false },
+      { id: '6', task: 'Review and optimize one expense category', completed: false },
+      { id: '7', task: 'Set aside emergency fund contribution', completed: false },
     ];
   } else if (planId === 'B') {
     return [
       ...baseChecklist,
-      { id: '5', task: 'Research debt consolidation options', completed: false },
-      { id: '6', task: 'Contact creditors to negotiate rates', completed: false },
-      { id: '7', task: 'Set up automatic savings transfers', completed: false },
-      { id: '8', task: 'Review and adjust budget categories', completed: false },
+      { id: '5', task: 'Make extra payment toward highest interest debt', completed: false },
+      { id: '6', task: 'Research debt consolidation or refinancing options', completed: false },
+      { id: '7', task: 'Contact creditors to negotiate lower rates', completed: false },
+      { id: '8', task: 'Review and cut one non-essential expense', completed: false },
     ];
   } else {
     // Plan C
     return [
       ...baseChecklist,
-      { id: '5', task: 'Identify and eliminate 3 non-essential expenses', completed: false },
-      { id: '6', task: 'Explore additional income opportunities', completed: false },
-      { id: '7', task: 'Create aggressive debt payoff schedule', completed: false },
-      { id: '8', task: 'Research credit counseling resources', completed: false },
-      { id: '9', task: 'Document all financial transactions', completed: false },
+      { id: '5', task: 'Make aggressive payment toward overdue amounts', completed: false },
+      { id: '6', task: 'Identify and eliminate 2-3 non-essential expenses', completed: false },
+      { id: '7', task: 'Explore additional income opportunities', completed: false },
+      { id: '8', task: 'Contact creditors for debt settlement options', completed: false },
+      { id: '9', task: 'Document all financial transactions and payments', completed: false },
+      { id: '10', task: 'Review progress and adjust strategy if needed', completed: false },
     ];
   }
 }

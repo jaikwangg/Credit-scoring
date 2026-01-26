@@ -1,53 +1,30 @@
 // CreditInput type definition - MUST MATCH EXACTLY
 export interface CreditInput {
-  // Step 1: Income & Expenses
-  mainIncome: string;
-  additionalIncome: string;
-  incomeFrequency: string;
-  livingCosts: string;
-  otherDebts: string;
-
-  // Step 2: Debt Burden
-  existingLoans: string;
-  loanAmount: string;
-
-  // Step 3: Saving Behavior
-  savingFrequency: string;
-  dailySavingAmount?: string;
-  weeklySavingAmount?: string;
-  monthlySavingAmount?: string;
-  multiSavingAmount?: string;
-  timesPerMonth?: string;
-  timesPerWeek?: string;
-  timesPerDay?: string;
-  savingAccount: string;
-  numberOfAccounts: string;
-
-  // Step 4: Personal Info
-  age: string;
-  education: string;
-  occupation: string;
-  coBorrower: string;
-
-  // Step 5: Goal
-  targetAmount: string;
-  loanPeriod: string;
-  interest: string;
-  location: string;
+  Sex: string;
+  Occupation: string;
+  Salary: string;
+  Marital_status: string;
+  credit_score: string;
+  credit_grade: string;
+  outstanding: string;
+  overdue: string;
+  loan_amount: string;
+  Coapplicant: string;
+  Interest_rate: string;
 }
 
 export interface CreditScore {
   score: number;
-  label: string;
+  grade: string;
   factors: string[];
 }
 
 export interface Plan {
   id: 'A' | 'B' | 'C';
-  goal: string;
+  objective: string;
   timeframe: string;
   keyActions: string[];
-  difficulty: 'Easy' | 'Moderate' | 'Challenging';
+  difficulty: 'Conservative' | 'Balanced' | 'Aggressive';
   estimatedScoreImpact: string;
   warnings?: string;
 }
