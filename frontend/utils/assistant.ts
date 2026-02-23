@@ -11,7 +11,10 @@ export function generateAssistantResponse(
 ): string {
   const lowerMessage = message.toLowerCase();
   const score = scoreCredit(input);
-  const parseNumber = (val: string): number => parseFloat(val) || 0;
+  const parseNumber = (val: string): number => {
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : num;
+  };
 
   // Context-aware responses
   if (lowerMessage.includes('score') || lowerMessage.includes('credit')) {
@@ -67,7 +70,10 @@ export function generateAssistantResponse(
  */
 export function generateSummary(input: CreditInput): string {
   const score = scoreCredit(input);
-  const parseNumber = (val: string): number => parseFloat(val) || 0;
+  const parseNumber = (val: string): number => {
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : num;
+  };
   
   const overdue = parseNumber(input.overdue);
   const outstanding = parseNumber(input.outstanding);

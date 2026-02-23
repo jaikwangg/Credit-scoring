@@ -1,0 +1,715 @@
+# FastAPI ML-RAG Backend
+
+A FastAPI middleware service that orchestrates requests between a frontend client and two backend services: a cloud-hosted ML model endpoint and a LangChain RAG pipeline. The service receives prediction requests, forwards them to the ML model, enriches the results with natural language explanations via RAG, and returns a unified response.
+
+## Architecture
+
+```
+┌─────────────────┐
+│ Frontend Client │
+└────────┬────────┘
+         │ POST /predict
+         ▼
+┌─────────────────┐
+│  FastAPI App    │
+│   (main.py)     │
+└────┬───────┬────┘
+     │       │
+     │       └──────────────┐
+     ▼                      ▼
+┌──────────────┐    ┌──────────────┐
+│ ML Service   │    │ RAG Service  │
+│(ml_service.py)│    │(rag_service.py)│
+└──────┬───────┘    └──────┬───────┘
+       │                   │
+       ▼                   ▼
+┌──────────────┐    ┌──────────────┐
+│ Cloud ML     │    │ LLM API      │
+│ Endpoint     │    │ (OpenAI/     │
+│              │    │  Anthropic)  │
+└──────────────┘    └──────────────┘
+```
+
+### Workflow Sequence
+
+1. Client sends POST request to `/predict` with input text and optional features
+2. FastAPI app calls `call_ml_model()` to get prediction, confidence, and SHAP values
+3. FastAPI app calls `explain_with_rag()` with ML results to generate explanation
+4. FastAPI app returns unified response with prediction + explanation
+
+## Setup Instructions
+
+### Prerequisites
+
+- Python 3.9 or higher
+- pip or poetry for dependency management
+- Virtual environment (recommended)
+
+### Installation
+
+1. **Clone the repository and navigate to backend directory**
+   ```bash
+   cd backend
+   ```
+
+2. **Create and activate virtual environment**
+   ```bash
+   # Create virtual environment
+   python -m venv venv
+   
+   # Activate on Linux/Mac
+   source venv/bin/activate
+   
+   # Activate on Windows
+   venv\Scripts\activate
+   ```
+
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure environment variables**
+   ```bash
+   # Copy the example environment file
+   cp .env.example .env
+   
+   # Edit .env with your actual API keys and endpoints
+   # Use your preferred text editor (nano, vim, code, etc.)
+   nano .env
+   ```
+
+5. **Verify installation**
+   ```bash
+   # Run tests to ensure everything is set up correctly
+   pytest
+   ```
+
+## Environment Variables
+
+Create a `.env` file in the backend directory with the following variables:
+
+### Required Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `ML_ENDPOINT_URL` | URL of your cloud-hosted ML model endpoint | `https://api.example.com/ml/predict` |
+| `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` | API key for LLM service (at least one required) | `sk-your-openai-key-here` |
+
+### Optional Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `ML_API_KEY` | Bearer token for ML endpoint authentication | None |
+| `FRONTEND_URL` | Frontend origin for CORS configuration | `http://localhost:3000` |
+
+### Example .env File
+
+```bash
+# ML Service Configuration
+ML_ENDPOINT_URL=https://api.example.com/ml/predict
+ML_API_KEY=your_ml_api_key_here
+
+# LLM Configuration (choose one or both)
+OPENAI_API_KEY=sk-your-openai-key-here
+# ANTHROPIC_API_KEY=sk-ant-your-anthropic-key-here
+
+# CORS Configuration
+FRONTEND_URL=http://localhost:3000
+```
+
+### LLM Configuration
+
+The service supports two LLM providers:
+
+- **OpenAI** (default): Uses `gpt-4o-mini` model
+- **Anthropic** (fallback): Uses `claude-3-haiku-20240307` model
+
+If both API keys are provided, OpenAI will be used by default.
+
+## API Endpoints
+
+### POST /predict
+
+Sends input text to ML model and generates natural language explanation.
+
+**Request Body:**
+```json
+{
+  "input_text": "Customer feedback: The product quality is excellent but delivery was slow",
+  "extra_features": {
+    "customer_segment": "premium",
+    "order_value": 299.99
+  }
+}
+```
+
+**Request Fields:**
+- `input_text` (string, required): Text input for ML model prediction (min length: 1)
+- `extra_features` (object, optional): Additional features for the model
+
+**Response (200 OK):**
+```json
+{
+  "prediction": "positive_sentiment",
+  "confidence": 0.87,
+  "shap_values": {
+    "word_excellent": 0.45,
+    "word_quality": 0.32,
+    "word_slow": -0.28,
+    "sentiment_score": 0.15
+  },
+  "explanation": "The model predicts positive sentiment with 87% confidence.\n\nKey factors:\n- 'excellent' and 'quality' strongly indicate positive sentiment\n- 'slow' has negative impact but is outweighed by positive terms\n\nRecommendation: Address delivery speed to improve overall satisfaction."
+}
+```
+
+**Response Fields:**
+- `prediction` (any): Model prediction result (type depends on ML model)
+- `confidence` (float): Confidence score between 0.0 and 1.0
+- `shap_values` (object): Dictionary of feature names to SHAP importance values
+- `explanation` (string): Natural language explanation generated by RAG
+
+**Error Responses:**
+
+| Status Code | Description |
+|-------------|-------------|
+| 422 | Validation error (e.g., empty input_text) |
+| 500 | Internal server error or missing configuration |
+| 502 | ML endpoint returned bad response |
+| 503 | ML endpoint connection failure or timeout |
+
+**Example with cURL:**
+```bash
+curl -X POST "http://localhost:8000/predict" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input_text": "The product quality is excellent but delivery was slow",
+    "extra_features": {
+      "customer_segment": "premium"
+    }
+  }'
+```
+
+**Example with Python:**
+```python
+import httpx
+import asyncio
+
+async def predict():
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "http://localhost:8000/predict",
+            json={
+                "input_text": "The product quality is excellent but delivery was slow",
+                "extra_features": {
+                    "customer_segment": "premium",
+                    "order_value": 299.99
+                }
+            }
+        )
+        result = response.json()
+        print(f"Prediction: {result['prediction']}")
+        print(f"Confidence: {result['confidence']:.2%}")
+        print(f"\nExplanation:\n{result['explanation']}")
+
+asyncio.run(predict())
+```
+
+**Example with JavaScript/TypeScript:**
+```typescript
+const response = await fetch('http://localhost:8000/predict', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    input_text: 'The product quality is excellent but delivery was slow',
+    extra_features: {
+      customer_segment: 'premium',
+      order_value: 299.99
+    }
+  })
+});
+
+const result = await response.json();
+console.log('Prediction:', result.prediction);
+console.log('Confidence:', result.confidence);
+console.log('Explanation:', result.explanation);
+```
+
+### GET /health
+
+Health check endpoint to verify service availability.
+
+**Response (200 OK):**
+```json
+{
+  "status": "healthy"
+}
+```
+
+**Example with cURL:**
+```bash
+curl http://localhost:8000/health
+```
+
+## Running the Application
+
+### Development Server
+
+Start the development server with auto-reload:
+
+```bash
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+The API will be available at `http://localhost:8000`
+
+**Server Options:**
+- `--reload`: Auto-reload on code changes (development only)
+- `--host 0.0.0.0`: Listen on all network interfaces
+- `--port 8000`: Port number (default: 8000)
+- `--workers 4`: Number of worker processes (production)
+
+### Production Server
+
+For production, run without `--reload` and with multiple workers:
+
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+### Interactive API Documentation
+
+FastAPI automatically generates interactive API documentation:
+
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+
+These interfaces allow you to test API endpoints directly from your browser.
+
+## Testing
+
+### Running All Tests
+
+```bash
+# Run all tests with coverage
+pytest
+
+# Run with verbose output
+pytest -v
+
+# Run with coverage report
+pytest --cov=. --cov-report=html
+```
+
+### Running Specific Test Suites
+
+```bash
+# Run only unit tests
+pytest tests/test_ml_service.py tests/test_rag_service.py tests/test_main.py
+
+# Run only property-based tests
+pytest tests/test_properties.py
+
+# Run only integration tests
+pytest tests/test_integration.py
+
+# Run specific test function
+pytest tests/test_main.py::test_predict_endpoint_success
+```
+
+### Test Coverage
+
+View test coverage report:
+
+```bash
+# Generate HTML coverage report
+pytest --cov=. --cov-report=html
+
+# Open coverage report in browser
+# On Linux/Mac
+open htmlcov/index.html
+
+# On Windows
+start htmlcov/index.html
+```
+
+### Test Structure
+
+```
+tests/
+├── __init__.py
+├── conftest.py              # Shared fixtures
+├── test_ml_service.py       # ML service unit tests
+├── test_rag_service.py      # RAG service unit tests
+├── test_main.py             # FastAPI endpoint tests
+├── test_properties.py       # Property-based tests
+└── test_integration.py      # End-to-end integration tests
+```
+
+### Writing New Tests
+
+Tests use pytest with async support:
+
+```python
+import pytest
+from httpx import AsyncClient
+from main import app
+
+@pytest.mark.asyncio
+async def test_my_endpoint():
+    async with AsyncClient(app=app, base_url="http://test") as client:
+        response = await client.post("/predict", json={
+            "input_text": "test input"
+        })
+        assert response.status_code == 200
+```
+
+## Project Structure
+
+```
+backend/
+├── main.py                  # FastAPI application entry point
+├── ml_service.py            # ML model service (calls cloud endpoint)
+├── rag_service.py           # RAG service (LangChain + LLM)
+├── requirements.txt         # Python dependencies
+├── .env                     # Environment variables (not in git)
+├── .env.example             # Environment template
+├── .gitignore               # Git ignore rules
+├── pytest.ini               # Pytest configuration
+├── README.md                # This file
+└── tests/                   # Test suite
+    ├── __init__.py
+    ├── conftest.py
+    ├── test_ml_service.py
+    ├── test_rag_service.py
+    ├── test_main.py
+    ├── test_properties.py
+    └── test_integration.py
+```
+
+## Component Details
+
+### main.py
+- FastAPI application setup
+- CORS middleware configuration
+- `/predict` and `/health` endpoint implementations
+- Request/response model definitions (Pydantic)
+- Startup validation for environment variables
+
+### ml_service.py
+- `call_ml_model()`: Async function to call cloud ML endpoint
+- HTTP client using httpx.AsyncClient
+- Bearer token authentication (if ML_API_KEY is set)
+- Error handling for connection failures and bad responses
+- 30-second timeout for ML requests
+
+### rag_service.py
+- `explain_with_rag()`: Async function to generate explanations
+- SHAP value sorting and top-10 feature selection
+- LangChain prompt template creation
+- LLM initialization (OpenAI or Anthropic)
+- Async chain invocation with `ainvoke()`
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue: "Missing required environment variables"**
+- **Solution**: Ensure `.env` file exists and contains all required variables
+- Check that `ML_ENDPOINT_URL` and at least one LLM API key are set
+
+**Issue: "Failed to connect to ML endpoint"**
+- **Solution**: Verify `ML_ENDPOINT_URL` is correct and accessible
+- Check network connectivity and firewall rules
+- Verify ML endpoint is running and accepting requests
+
+**Issue: "No LLM API key configured"**
+- **Solution**: Set either `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` in `.env`
+- Verify API key is valid and has sufficient credits
+
+**Issue: "CORS error in browser"**
+- **Solution**: Ensure `FRONTEND_URL` in `.env` matches your frontend origin
+- Check that CORS middleware is properly configured in `main.py`
+
+**Issue: "Tests failing with import errors"**
+- **Solution**: Ensure virtual environment is activated
+- Run `pip install -r requirements.txt` to install all dependencies
+
+**Issue: "ML endpoint returns 401 Unauthorized"**
+- **Solution**: Set `ML_API_KEY` in `.env` if ML endpoint requires authentication
+- Verify the API key is correct
+
+### Debug Mode
+
+Enable debug logging:
+
+```python
+# Add to main.py
+import logging
+logging.basicConfig(level=logging.DEBUG)
+```
+
+### Checking Service Status
+
+```bash
+# Check if server is running
+curl http://localhost:8000/health
+
+# Check server logs
+# Logs are printed to console when running uvicorn
+```
+
+## Performance Considerations
+
+### Async I/O
+- All I/O operations use async/await for non-blocking execution
+- Multiple concurrent requests are handled efficiently
+- httpx.AsyncClient for async HTTP requests
+- LangChain ainvoke() for async LLM calls
+
+### Timeouts
+- ML endpoint timeout: 30 seconds
+- LLM timeout: 30 seconds (configurable in LLM initialization)
+
+### Expected Response Times
+- Typical response: 500ms - 2s (depends on ML endpoint and LLM latency)
+- Health check: < 10ms
+
+## Security Best Practices
+
+### API Key Management
+- Never commit `.env` file to version control
+- Use secrets management service in production (AWS Secrets Manager, HashiCorp Vault)
+- Rotate API keys regularly
+- Use environment-specific keys (dev, staging, production)
+
+### CORS Configuration
+- Use specific origin URLs, not wildcard (`*`)
+- Configure `FRONTEND_URL` to match your frontend domain
+- In production, use HTTPS URLs only
+
+### Input Validation
+- Pydantic models automatically validate request data
+- input_text has minimum length of 1 character
+- confidence values are constrained to 0.0-1.0 range
+
+### HTTPS/TLS
+- Always use HTTPS in production
+- Use reverse proxy (nginx, Traefik) or cloud load balancer for TLS termination
+- Protects API keys and data in transit
+
+## Docker Deployment
+
+The application includes Docker support for containerized deployment.
+
+### Prerequisites
+
+- Docker Engine 20.10 or higher
+- Docker Compose 2.0 or higher (optional, for docker-compose)
+
+### Docker Files
+
+The project includes the following Docker files:
+
+- **Dockerfile**: Multi-stage build with Python 3.11 slim image
+- **docker-compose.yml**: Orchestration configuration
+- **.dockerignore**: Excludes unnecessary files from build context
+
+### Building the Docker Image
+
+```bash
+# Build the image
+docker build -t fastapi-ml-rag-backend .
+
+# Build with specific tag
+docker build -t fastapi-ml-rag-backend:v1.0.0 .
+```
+
+### Running with Docker
+
+**Option 1: Using docker run**
+
+```bash
+# Run container with environment file
+docker run -d \
+  --name fastapi-ml-rag-backend \
+  -p 8000:8000 \
+  --env-file .env \
+  fastapi-ml-rag-backend
+
+# View logs
+docker logs -f fastapi-ml-rag-backend
+
+# Stop container
+docker stop fastapi-ml-rag-backend
+
+# Remove container
+docker rm fastapi-ml-rag-backend
+```
+
+**Option 2: Using docker-compose (Recommended)**
+
+```bash
+# Start services in detached mode
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+
+# Rebuild and restart
+docker-compose up -d --build
+```
+
+### Docker Configuration
+
+**Dockerfile Features:**
+- Python 3.11 slim base image for smaller size
+- Multi-layer caching for faster rebuilds
+- Non-root user for security
+- Health check endpoint monitoring
+- Optimized for production use
+
+**docker-compose.yml Features:**
+- Automatic environment variable loading from .env
+- Port mapping (8000:8000)
+- Health check configuration
+- Restart policy (unless-stopped)
+- Custom network for service isolation
+
+### Health Check
+
+The Docker container includes a built-in health check that monitors the `/health` endpoint:
+
+```bash
+# Check container health status
+docker ps
+
+# View health check logs
+docker inspect --format='{{json .State.Health}}' fastapi-ml-rag-backend
+```
+
+### Environment Variables in Docker
+
+Ensure your `.env` file is present in the backend directory before running Docker:
+
+```bash
+# Verify .env file exists
+ls -la .env
+
+# If not, copy from example
+cp .env.example .env
+```
+
+The docker-compose.yml automatically loads variables from `.env` file.
+
+### Docker Best Practices
+
+**Security:**
+- Container runs as non-root user (appuser)
+- No sensitive data in image layers
+- Environment variables loaded at runtime
+
+**Performance:**
+- Slim base image reduces size
+- Layer caching optimizes build time
+- .dockerignore excludes unnecessary files
+
+**Monitoring:**
+- Health check every 30 seconds
+- Automatic restart on failure
+- Logs accessible via docker logs
+
+### Testing Docker Build
+
+```bash
+# Build the image
+docker build -t fastapi-ml-rag-backend .
+
+# Run container
+docker run -d --name test-backend -p 8000:8000 --env-file .env fastapi-ml-rag-backend
+
+# Test health endpoint
+curl http://localhost:8000/health
+
+# Test predict endpoint
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"input_text": "test input"}'
+
+# Clean up
+docker stop test-backend
+docker rm test-backend
+```
+
+### Troubleshooting Docker
+
+**Issue: "Cannot connect to Docker daemon"**
+- **Solution**: Start Docker Desktop or Docker service
+- Windows: Start Docker Desktop application
+- Linux: `sudo systemctl start docker`
+
+**Issue: "Port 8000 already in use"**
+- **Solution**: Change port mapping in docker-compose.yml or stop conflicting service
+- Example: `ports: - "8001:8000"` (maps host port 8001 to container port 8000)
+
+**Issue: "Environment variables not loaded"**
+- **Solution**: Ensure .env file exists and is in the same directory as docker-compose.yml
+- Check file permissions: `chmod 644 .env`
+
+**Issue: "Health check failing"**
+- **Solution**: Check application logs: `docker logs fastapi-ml-rag-backend`
+- Verify environment variables are set correctly
+- Ensure ML_ENDPOINT_URL and LLM API keys are valid
+
+## Dependencies
+
+### Core Dependencies
+- **fastapi** (0.109.0): Web framework for building APIs
+- **uvicorn** (0.27.0): ASGI server for running FastAPI
+- **pydantic** (2.5.0): Data validation using Python type hints
+- **python-dotenv** (1.0.0): Load environment variables from .env file
+- **httpx** (0.26.0): Async HTTP client for ML endpoint calls
+
+### LangChain Dependencies
+- **langchain** (0.1.0): LangChain core framework
+- **langchain-openai** (0.0.2): OpenAI integration for LangChain
+- **langchain-anthropic** (0.0.1): Anthropic integration for LangChain
+
+### Testing Dependencies
+- **pytest** (7.4.0): Testing framework
+- **pytest-asyncio** (0.21.0): Async test support for pytest
+- **hypothesis** (6.92.0): Property-based testing library
+
+## Contributing
+
+### Code Style
+- Follow PEP 8 style guidelines
+- Use type hints for function parameters and return values
+- Add docstrings for all public functions
+- Include Thai comments (ภาษาไทย) for non-obvious logic
+
+### Testing Requirements
+- Write unit tests for all new functions
+- Add property-based tests for universal properties
+- Ensure test coverage remains above 80%
+- All tests must pass before merging
+
+### Pull Request Process
+1. Create feature branch from main
+2. Implement changes with tests
+3. Run full test suite: `pytest`
+4. Update documentation if needed
+5. Submit pull request with clear description
+
+## License
+
+[Add your license information here]
+
+## Support
+
+For issues, questions, or contributions, please [add contact information or issue tracker link].

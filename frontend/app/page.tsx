@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { CreditInput, CreditScore, Plan, ChecklistItem } from '@/types/credit';
 import { scoreCredit } from '@/utils/scoring';
 import { generatePlans, generateChecklist } from '@/utils/plans';
+import { predictCredit } from '@/utils/api';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CreditForm from '@/components/CreditForm';
@@ -67,15 +68,36 @@ export default function Home() {
     setIsCalculating(true);
     setView('result');
     
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    const score = scoreCredit(data);
-    const generatedPlans = generatePlans(data);
-    
-    setCreditScore(score);
-    setPlans(generatedPlans);
-    setIsCalculating(false);
+    try {
+      // Option 1: Use local scoring (current implementation)
+      const score = scoreCredit(data);
+      const generatedPlans = generatePlans(data);
+      
+      setCreditScore(score);
+      setPlans(generatedPlans);
+      
+      // Option 2: Call backend API (uncomment to use)
+      // const inputText = JSON.stringify(data);
+      // const prediction = await predictCredit(inputText, data);
+      // 
+      // // Map backend response to CreditScore format
+      // const score: CreditScore = {
+      //   score: Math.round(prediction.confidence * 1000),
+      //   grade: prediction.confidence >= 0.8 ? 'Excellent' : 
+      //          prediction.confidence >= 0.65 ? 'Good' : 
+      //          prediction.confidence >= 0.5 ? 'Fair' : 'Poor',
+      //   factors: [prediction.explanation.substring(0, 100)]
+      // };
+      // 
+      // setCreditScore(score);
+      // setPlans(generatePlans(data));
+    } catch (error) {
+      console.error('Error calculating credit score:', error);
+      alert('Failed to calculate credit score. Please try again.');
+      setView('form');
+    } finally {
+      setIsCalculating(false);
+    }
   };
 
   const handleTalkToAssistant = () => {
@@ -123,8 +145,8 @@ export default function Home() {
           {view === 'result' && (
             <div className="max-w-4xl mx-auto">
               {isCalculating ? (
-                <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-                  <div className="w-16 h-16 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <div className="bg-white rounded-2xl shadow-lg p-12 text-center" role="status" aria-live="polite">
+                  <div className="w-16 h-16 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" aria-hidden="true"></div>
                   <p className="text-lg font-semibold text-gray-700">Calculating your credit score...</p>
                   <p className="text-sm text-gray-500 mt-2">This may take a few seconds</p>
                 </div>

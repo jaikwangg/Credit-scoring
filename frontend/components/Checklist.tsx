@@ -23,6 +23,7 @@ export default function Checklist({ items, onToggle }: ChecklistProps) {
               checked={item.completed}
               onChange={() => onToggle(item.id)}
               className="w-5 h-5 text-primary-600 rounded focus:ring-primary-500 cursor-pointer"
+              aria-label={item.task}
             />
             <label
               className={`ml-3 flex-1 cursor-pointer ${

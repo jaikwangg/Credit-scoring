@@ -6,7 +6,10 @@ import { scoreCredit } from './scoring';
  */
 export function generatePlans(input: CreditInput): Plan[] {
   const score = scoreCredit(input);
-  const parseNumber = (val: string): number => parseFloat(val) || 0;
+  const parseNumber = (val: string): number => {
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : num;
+  };
   
   const salary = parseNumber(input.Salary);
   const outstanding = parseNumber(input.outstanding);

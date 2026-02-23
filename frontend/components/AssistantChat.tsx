@@ -91,7 +91,7 @@ export default function AssistantChat({ input, selectedPlan }: AssistantChatProp
         ))}
         {isTyping && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-lg p-3">
+            <div className="bg-gray-100 rounded-lg p-3" role="status" aria-live="polite" aria-label="AI is typing">
               <div className="flex space-x-1">
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />

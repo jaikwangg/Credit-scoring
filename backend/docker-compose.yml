@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastapi-ml-rag-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # Load from .env file
+      - ML_ENDPOINT_URL=${ML_ENDPOINT_URL}
+      - ML_API_KEY=${ML_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health', timeout=5.0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - ml-rag-network
+
+networks:
+  ml-rag-network:
+    driver: bridge
