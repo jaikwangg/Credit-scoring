@@ -1,0 +1,4 @@
+# file: C:\Users\Kanna\OneDrive\Documents\GitHub\Credit-scoring-1\backend\ml_service.py
+# hypothesis_version: 6.151.9
+
+[30.0, 200, 500, 502, 503, 'Authorization', 'Content-Type', 'ML_API_KEY', 'ML_ENDPOINT_URL', 'application/json', 'confidence', 'extra_features', 'input_text', 'prediction', 'shap_values']

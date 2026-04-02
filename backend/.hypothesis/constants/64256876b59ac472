@@ -1,0 +1,4 @@
+# file: C:\Users\Kanna\OneDrive\Documents\GitHub\Credit-scoring-1\backend\rag_service.py
+# hypothesis_version: 6.151.9
+
+[0.7, 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'confidence', 'content', 'gpt-4o-mini', 'input_text', 'negative', 'positive', 'prediction', 'shap_features']

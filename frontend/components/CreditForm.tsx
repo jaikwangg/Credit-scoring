@@ -200,7 +200,7 @@ export default function CreditForm({ register, errors }: CreditFormProps) {
           {errors.loan_amount && (
             <p className="mt-1 text-sm text-red-600">{errors.loan_amount.message}</p>
           )}
-          <p className="mt-1 text-xs text-gray-500">Amount you're seeking or have</p>
+          <p className="mt-1 text-xs text-gray-500">Amount you&apos;re seeking or have</p>
         </div>
 
         {/* Interest_rate */}

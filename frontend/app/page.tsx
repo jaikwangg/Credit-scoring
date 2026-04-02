@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { CreditInput, CreditScore, Plan, ChecklistItem } from '@/types/credit';
-import { scoreCredit } from '@/utils/scoring';
 import { generatePlans, generateChecklist } from '@/utils/plans';
 import { predictCredit } from '@/utils/api';
 import Header from '@/components/Header';
@@ -67,33 +66,38 @@ export default function Home() {
   const onSubmit = async (data: CreditInput) => {
     setIsCalculating(true);
     setView('result');
-    
+
     try {
-      // Option 1: Use local scoring (current implementation)
-      const score = scoreCredit(data);
-      const generatedPlans = generatePlans(data);
-      
+      const inputText = JSON.stringify(data);
+      const prediction = await predictCredit(inputText, data as unknown as Record<string, any>);
+
+      // Map SHAP values to human-readable factor descriptions (top 3 by absolute value)
+      const topShap = Object.entries(prediction.shap_values)
+        .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+        .slice(0, 3)
+        .map(([key, value]) => {
+          const impact = value >= 0 ? 'positively' : 'negatively';
+          return `${key.replace(/_/g, ' ')} impacts your score ${impact}`;
+        });
+
+      const score: CreditScore = {
+        score: Math.round(prediction.confidence * 1000),
+        grade:
+          prediction.confidence >= 0.8
+            ? 'Excellent'
+            : prediction.confidence >= 0.65
+            ? 'Good'
+            : prediction.confidence >= 0.5
+            ? 'Fair'
+            : 'Poor',
+        factors: topShap.length >= 3 ? topShap : [...topShap, prediction.explanation.split('\n')[0]].slice(0, 3),
+      };
+
       setCreditScore(score);
-      setPlans(generatedPlans);
-      
-      // Option 2: Call backend API (uncomment to use)
-      // const inputText = JSON.stringify(data);
-      // const prediction = await predictCredit(inputText, data);
-      // 
-      // // Map backend response to CreditScore format
-      // const score: CreditScore = {
-      //   score: Math.round(prediction.confidence * 1000),
-      //   grade: prediction.confidence >= 0.8 ? 'Excellent' : 
-      //          prediction.confidence >= 0.65 ? 'Good' : 
-      //          prediction.confidence >= 0.5 ? 'Fair' : 'Poor',
-      //   factors: [prediction.explanation.substring(0, 100)]
-      // };
-      // 
-      // setCreditScore(score);
-      // setPlans(generatePlans(data));
+      setPlans(generatePlans(data));
     } catch (error) {
       console.error('Error calculating credit score:', error);
-      alert('Failed to calculate credit score. Please try again.');
+      alert('Failed to calculate credit score. Please check that the backend is running and try again.');
       setView('form');
     } finally {
       setIsCalculating(false);

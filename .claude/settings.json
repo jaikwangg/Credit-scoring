@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bun run:*)",
+      "Bash(npx next:*)",
+      "Bash(node_modules/.bin/next lint:*)",
+      "Bash(bun install:*)",
+      "Bash(bun add:*)",
+      "Bash(python -m pytest --tb=short -q)",
+      "Bash(pip install:*)"
+    ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true
+  }
+}

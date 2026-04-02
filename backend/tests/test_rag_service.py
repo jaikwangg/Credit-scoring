@@ -105,11 +105,12 @@ def test_shap_feature_formatting():
 @patch.dict(os.environ, {"OPENAI_API_KEY": "test-openai-key"}, clear=True)
 def test_llm_initialization_with_openai():
     """Test that LLM initializes with OpenAI when OPENAI_API_KEY is set"""
+    import rag_service as rs
     with patch('rag_service.ChatOpenAI') as mock_openai:
         mock_openai.return_value = MagicMock()
-        
-        llm = _initialize_llm()
-        
+
+        llm = rs._initialize_llm()
+
         # Verify ChatOpenAI was called with correct parameters
         mock_openai.assert_called_once_with(
             model="gpt-4o-mini",
@@ -121,11 +122,12 @@ def test_llm_initialization_with_openai():
 @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-anthropic-key"}, clear=True)
 def test_llm_initialization_with_anthropic():
     """Test that LLM initializes with Anthropic when only ANTHROPIC_API_KEY is set"""
+    import rag_service as rs
     with patch('rag_service.ChatAnthropic') as mock_anthropic:
         mock_anthropic.return_value = MagicMock()
-        
-        llm = _initialize_llm()
-        
+
+        llm = rs._initialize_llm()
+
         # Verify ChatAnthropic was called with correct parameters
         mock_anthropic.assert_called_once_with(
             model="claude-3-haiku-20240307",
@@ -149,32 +151,34 @@ def test_llm_initialization_failure_no_keys():
 @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
 async def test_chain_invocation_with_ainvoke():
     """Test that chain is invoked with ainvoke() method"""
+    import rag_service as rs
     shap_values = {"feature1": 0.5, "feature2": -0.3}
-    
+
     # Mock LLM and chain
     mock_llm = MagicMock()
     mock_chain = AsyncMock()
     mock_response = MagicMock()
     mock_response.content = "This is a test explanation"
     mock_chain.ainvoke.return_value = mock_response
-    
+
     with patch('rag_service._initialize_llm', return_value=mock_llm):
         with patch('rag_service.PromptTemplate') as mock_prompt:
             # Mock the chain creation (PromptTemplate | LLM)
             mock_prompt_instance = MagicMock()
             mock_prompt.return_value = mock_prompt_instance
-            mock_prompt_instance.__or__ = MagicMock(return_value=mock_chain)
-            
-            result = await explain_with_rag(
+            # Use .return_value on the existing magic method mock (not instance attribute)
+            mock_prompt_instance.__or__.return_value = mock_chain
+
+            result = await rs.explain_with_rag(
                 input_text="test input",
                 prediction="positive",
                 confidence=0.85,
                 shap_values=shap_values
             )
-            
+
             # Verify ainvoke was called
             mock_chain.ainvoke.assert_called_once()
-            
+
             # Verify the arguments passed to ainvoke
             call_args = mock_chain.ainvoke.call_args[0][0]
             assert call_args["input_text"] == "test input"
@@ -189,45 +193,46 @@ async def test_chain_invocation_with_ainvoke():
 @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
 async def test_explanation_text_extraction():
     """Test that explanation text is correctly extracted from response"""
+    import rag_service as rs
     shap_values = {"feature1": 0.5}
-    
+
     # Test with response that has .content attribute
     mock_llm = MagicMock()
     mock_chain = AsyncMock()
     mock_response = MagicMock()
     mock_response.content = "Explanation with content attribute"
     mock_chain.ainvoke.return_value = mock_response
-    
+
     with patch('rag_service._initialize_llm', return_value=mock_llm):
         with patch('rag_service.PromptTemplate') as mock_prompt:
             mock_prompt_instance = MagicMock()
             mock_prompt.return_value = mock_prompt_instance
-            mock_prompt_instance.__or__ = MagicMock(return_value=mock_chain)
-            
-            result = await explain_with_rag(
+            mock_prompt_instance.__or__.return_value = mock_chain
+
+            result = await rs.explain_with_rag(
                 input_text="test",
                 prediction="positive",
                 confidence=0.8,
                 shap_values=shap_values
             )
-            
+
             assert result == "Explanation with content attribute"
-    
+
     # Test with response that doesn't have .content attribute (fallback to str())
     mock_response_no_content = "String response without content attribute"
     mock_chain.ainvoke.return_value = mock_response_no_content
-    
+
     with patch('rag_service._initialize_llm', return_value=mock_llm):
         with patch('rag_service.PromptTemplate') as mock_prompt:
             mock_prompt_instance = MagicMock()
             mock_prompt.return_value = mock_prompt_instance
-            mock_prompt_instance.__or__ = MagicMock(return_value=mock_chain)
-            
-            result = await explain_with_rag(
+            mock_prompt_instance.__or__.return_value = mock_chain
+
+            result = await rs.explain_with_rag(
                 input_text="test",
                 prediction="positive",
                 confidence=0.8,
                 shap_values=shap_values
             )
-            
+
             assert result == "String response without content attribute"
