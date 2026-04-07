@@ -3,7 +3,8 @@ FastAPI ML-RAG Backend - Main Application
 Entry point for the API, handles HTTP routing, CORS, and orchestrates calls to ML and RAG services
 """
 
-from fastapi import FastAPI, HTTPException
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
@@ -13,25 +14,6 @@ import os
 # Load environment variables
 load_dotenv()
 
-app = FastAPI(title="ML-RAG Backend", version="1.0.0")
-
-# Configure CORS
-frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[frontend_url],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Import services
-from ml_service import call_ml_model
-from rag_service import explain_with_rag
-
-
-# Startup validation
-@app.on_event("startup")
 async def validate_configuration():
     """
     Validate required environment variables on startup
@@ -54,6 +36,30 @@ async def validate_configuration():
             "No LLM API key configured. "
             "Please set either OPENAI_API_KEY or ANTHROPIC_API_KEY in your .env file."
         )
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Application lifespan hook to validate environment at startup."""
+    await validate_configuration()
+    yield
+
+
+app = FastAPI(title="ML-RAG Backend", version="1.0.0", lifespan=lifespan)
+
+# Configure CORS
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[frontend_url],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Import services
+from ml_service import call_ml_model
+from rag_service import explain_with_rag
 
 
 # Pydantic models

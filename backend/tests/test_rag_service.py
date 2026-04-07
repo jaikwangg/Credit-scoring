@@ -6,14 +6,18 @@ Tests the explain_with_rag() function and _initialize_llm() helper
 import pytest
 import os
 import sys
+import importlib
 from unittest.mock import AsyncMock, patch, MagicMock
 
 # Add backend directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-# Mock langchain imports before importing rag_service to avoid dependency issues
-sys.modules['langchain_openai'] = MagicMock()
-sys.modules['langchain_anthropic'] = MagicMock()
+# Use real modules when available; otherwise mock to keep unit tests isolated.
+for module_name in ("langchain_openai", "langchain_anthropic"):
+    try:
+        importlib.import_module(module_name)
+    except Exception:
+        sys.modules[module_name] = MagicMock()
 
 from rag_service import explain_with_rag, _initialize_llm
 

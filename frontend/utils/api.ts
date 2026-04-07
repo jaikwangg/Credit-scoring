@@ -17,7 +17,18 @@ export interface PredictResponse {
 }
 
 export interface ApiError {
-  detail: string;
+  detail?: string;
+  error?: string;
+  message?: string;
+}
+
+async function getErrorMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const error = (await response.json()) as ApiError;
+    return error.detail || error.error || error.message || fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 /**
@@ -39,8 +50,7 @@ export async function predictCredit(
   });
 
   if (!response.ok) {
-    const error: ApiError = await response.json();
-    throw new Error(error.detail || 'Failed to get prediction');
+    throw new Error(await getErrorMessage(response, 'Failed to get prediction'));
   }
 
   return response.json();
@@ -53,7 +63,7 @@ export async function checkHealth(): Promise<{ status: string }> {
   const response = await fetch(`${API_BASE_URL}/health`);
   
   if (!response.ok) {
-    throw new Error('Backend is not healthy');
+    throw new Error(await getErrorMessage(response, 'Backend is not healthy'));
   }
 
   return response.json();
